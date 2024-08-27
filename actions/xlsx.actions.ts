@@ -1,8 +1,6 @@
 'use server'
 
-import { readFile } from 'fs/promises'
-import { cache } from 'react'
-import path from 'path'
+import NodeCache from 'node-cache';
 
 interface StudentData {
   Student_Registration_Number: string;
@@ -13,12 +11,30 @@ interface AllSheetsData {
   [sheetName: string]: StudentData[];
 }
 
-const readJsonFile = cache(async () => {
-    // const filePath = path.resolve(process.cwd(), 'public', 'students.json');
+// Initialize NodeCache instance
+const cache = new NodeCache({ stdTTL: 36000000 }); // Cache for 1 hour
 
-  const jsonData = await readFile("./data/students.json", 'utf-8')
-  return JSON.parse(jsonData) as AllSheetsData
-})
+// URL of the GitHub Gist containing the JSON file
+const GIST_URL = 'https://gist.githubusercontent.com/GrowWidTalha/06a4af8613d3decb2db1fbcb0c203482/raw/3e673788ceffe17f71700945d4294745cca95090/students.json';
+
+async function fetchJsonFile(): Promise<AllSheetsData> {
+  const cachedData = cache.get<AllSheetsData>('studentsData');
+
+  if (cachedData) {
+    console.log('Returning data from cache');
+    return cachedData;
+  }
+
+  console.log('Fetching data from GitHub Gist');
+  const response = await fetch(GIST_URL);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch JSON data: ${response.statusText}`);
+  }
+
+  const jsonData = await response.json();
+  cache.set('studentsData', jsonData); // Cache the data
+  return jsonData as AllSheetsData;
+}
 
 function getMotivationalQuote(passed: boolean): string {
   const passedQuotes = [
@@ -39,7 +55,7 @@ function getMotivationalQuote(passed: boolean): string {
 
 export async function getStudentStatus(rollNumber: string) {
   try {
-    const allSheets = await readJsonFile()
+    const allSheets = await fetchJsonFile();
 
     const cleanRollNumber = rollNumber.trim().padStart(8, '0');
     console.log(`Searching for roll number: ${cleanRollNumber}`);
@@ -57,7 +73,7 @@ export async function getStudentStatus(rollNumber: string) {
           status: 'Pass',
           sheet: sheetName,
           message: getMotivationalQuote(true)
-        }
+        };
       }
     }
 
@@ -66,16 +82,15 @@ export async function getStudentStatus(rollNumber: string) {
       rollNumber: cleanRollNumber,
       status: 'Fail',
       message: getMotivationalQuote(false)
-    }
+    };
   } catch (error) {
-    console.error('Error getting student status:', error)
-    return { error: 'An error occurred while fetching the data' }
+    console.error('Error getting student status:', error);
+    return { error: 'An error occurred while fetching the data' };
   }
 }
 
 export async function refreshCache() {
-  // In this case, we don't need to manually refresh the cache
-  // as we're using React's cache function which will automatically
-  // revalidate on each request in production
-  return { success: true, message: 'Cache refreshed successfully' }
+  cache.del('studentsData');
+  console.log('Cache refreshed successfully');
+  return { success: true, message: 'Cache refreshed successfully' };
 }
