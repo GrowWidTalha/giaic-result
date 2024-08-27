@@ -14,9 +14,9 @@ interface AllSheetsData {
 }
 
 const readJsonFile = cache(async () => {
-    const filePath = path.resolve(process.cwd(), 'public', 'students.json');
+    // const filePath = path.resolve(process.cwd(), 'public', 'students.json');
 
-  const jsonData = await readFile(filePath, 'utf-8')
+  const jsonData = await readFile("./data/students.json", 'utf-8')
   return JSON.parse(jsonData) as AllSheetsData
 })
 
