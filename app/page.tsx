@@ -1,113 +1,120 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useState } from "react"
+import Link from "next/link"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { getStudentStatus, refreshCache } from "@/actions/xlsx.actions"
+import { Loader2, CheckCircle, XCircle, RefreshCw } from "lucide-react"
+
+export default function Component() {
+  const [rollNumber, setRollNumber] = useState('')
+  const [result, setResult] = useState<{ rollNumber?: string; status?: string; message?: string; error?: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [refreshMessage, setRefreshMessage] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setResult(null)
+    try {
+      const status = await getStudentStatus(rollNumber)
+      setResult(status)
+    } catch (error) {
+      setResult({ error: 'An error occurred while fetching the result.' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleRefreshCache = async () => {
+    setRefreshMessage('Refreshing cache...')
+    try {
+      const result = await refreshCache()
+      setRefreshMessage(result.message)
+    } catch (error) {
+      setRefreshMessage('Failed to refresh cache')
+    }
+    setTimeout(() => setRefreshMessage(''), 3000)
+  }
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
+    <div className="flex flex-col min-h-[100dvh]">
+      <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
+        <Link href="#" className="font-medium" prefetch={false}>
+          GIAIC Prep Partners
+        </Link>
+      </header>
+      <main className="flex-1 flex items-center justify-center px-4 py-8">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Check Your GIAIC Result</CardTitle>
+            <CardDescription>Enter your roll number to see your quarter 1 result.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="rollNumber">Roll Number</Label>
+                <Input
+                  id="rollNumber"
+                  type="text"
+                  placeholder="Enter your roll number"
+                  value={rollNumber}
+                  onChange={(e) => setRollNumber(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Checking...
+                  </>
+                ) : (
+                  'Check Result'
+                )}
+              </Button>
+            </form>
+            {result && !result.error && (
+              <div className={`mt-4 rounded-md ${result.status === 'Pass' ? 'bg-success/10 border-success' : 'bg-error/10 border-error'} border p-4`}>
+                <div className="flex items-start gap-3">
+                  {result.status === 'Pass' ? (
+                    <CheckCircle className="h-6 w-6 text-success shrink-0" />
+                  ) : (
+                    <XCircle className="h-6 w-6 text-error shrink-0" />
+                  )}
+                  <div>
+                    <p className="font-semibold">{result.status === 'Pass' ? 'Congratulations!' : 'Keep pushing forward!'}</p>
+                    <p>Roll Number: {result.rollNumber}</p>
+                    <p>Status: {result.status}</p>
+                    <p className="mt-2 text-sm">{result.message}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {result && result.error && (
+              <div className="mt-4 rounded-md bg-error/10 border border-error text-error p-4">
+                <div className="flex items-center gap-3">
+                  <XCircle className="h-6 w-6 shrink-0" />
+                  <p>{result.error}</p>
+                </div>
+              </div>
+            )}
+            {refreshMessage && (
+              <div className="mt-4 text-sm text-muted-foreground">
+                {refreshMessage}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </main>
+      <footer className="bg-muted text-muted-foreground px-4 py-3 flex items-center justify-between">
+        <p className="text-sm">
+          Made with love by <Link href="https://linkedin.com/in/growwithtalha-webdeveloper" className="font-medium">Talha Ali</Link>
         </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  );
+      </footer>
+    </div>
+  )
 }
