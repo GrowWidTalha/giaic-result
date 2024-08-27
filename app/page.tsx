@@ -59,7 +59,9 @@ export default function Component() {
                   id="rollNumber"
                   type="number"
                 //   min={6}
-                  max={6}
+                //   max={6}
+                minLength={6}
+                maxLength={6}
                   placeholder="Enter your roll number"
                   value={rollNumber}
                   onChange={(e) => setRollNumber(e.target.value)}
