@@ -1,51 +1,23 @@
 'use server'
 
 import { readFile } from 'fs/promises'
-import * as XLSX from 'xlsx'
-import NodeCache from 'node-cache'
-
-// Initialize cache with 1 hour TTL
-const cache = new NodeCache({ stdTTL: 3600 });
+import { cache } from 'react'
+import path from 'path'
 
 interface StudentData {
-  'Student_Registration_Number': string;
-  'Quarter 1 Exam Result': string;
-  [key: string]: string; // For any additional columns
+  Student_Registration_Number: string;
+  Quarter_1_Exam_Result: string;
 }
 
-async function readAndCacheExcelData() {
-  try {
-    const buffer = await readFile('./data/students.xlsx')
-    const workbook = XLSX.read(buffer, { cellText: false, cellDates: true })
-
-    const allSheets: { [sheetName: string]: StudentData[] } = {};
-
-    workbook.SheetNames.forEach(sheetName => {
-      const sheet = workbook.Sheets[sheetName]
-      const jsonData = XLSX.utils.sheet_to_json(sheet, {
-        raw: false,
-        defval: '',
-      }) as StudentData[]
-
-      // Validate and clean data
-      const cleanedData = jsonData.map(row => {
-        const cleanRow: StudentData = {
-          'Student_Registration_Number': String(row['Student_Registration_Number'] || '').trim(),
-          'Quarter 1 Exam Result': String(row['Quarter 1 Exam Result'] || '').trim(),
-        };
-        return cleanRow;
-      }).filter(row => row['Student_Registration_Number'] && row['Quarter 1 Exam Result']);
-
-      allSheets[sheetName] = cleanedData;
-    })
-
-    cache.set('excelData', allSheets)
-    return allSheets
-  } catch (error) {
-    console.error('Error reading Excel file:', error)
-    throw error
-  }
+interface AllSheetsData {
+  [sheetName: string]: StudentData[];
 }
+
+const readJsonFile = cache(async () => {
+  const filePath = path.join(process.cwd(), 'data', 'students.json')
+  const jsonData = await readFile(filePath, 'utf-8')
+  return JSON.parse(jsonData) as AllSheetsData
+})
 
 function getMotivationalQuote(passed: boolean): string {
   const passedQuotes = [
@@ -66,25 +38,21 @@ function getMotivationalQuote(passed: boolean): string {
 
 export async function getStudentStatus(rollNumber: string) {
   try {
-    let allSheets = cache.get('excelData') as { [sheetName: string]: StudentData[] } | undefined
-
-    if (!allSheets) {
-      allSheets = await readAndCacheExcelData()
-    } else {
-      console.log('Using cached data.');
-    }
+    const allSheets = await readJsonFile()
 
     const cleanRollNumber = rollNumber.trim().padStart(8, '0');
+    console.log(`Searching for roll number: ${cleanRollNumber}`);
 
     for (const sheetName in allSheets) {
-      const student = allSheets[sheetName].find(row => {
-        const rowRollNumber = row['Student_Registration_Number'].trim().padStart(8, '0');
-        return rowRollNumber === cleanRollNumber;
-      });
+      console.log(`Searching in sheet: ${sheetName}`);
+      const student = allSheets[sheetName].find(row =>
+        row.Student_Registration_Number.trim().padStart(8, '0') === cleanRollNumber
+      );
 
       if (student) {
+        console.log(`Student found in sheet ${sheetName}`);
         return {
-          rollNumber: student['Student_Registration_Number'],
+          rollNumber: student.Student_Registration_Number,
           status: 'Pass',
           sheet: sheetName,
           message: getMotivationalQuote(true)
@@ -92,6 +60,7 @@ export async function getStudentStatus(rollNumber: string) {
       }
     }
 
+    console.log(`Student with roll number ${cleanRollNumber} not found in any sheet.`);
     return {
       rollNumber: cleanRollNumber,
       status: 'Fail',
@@ -104,11 +73,8 @@ export async function getStudentStatus(rollNumber: string) {
 }
 
 export async function refreshCache() {
-  try {
-    await readAndCacheExcelData()
-    return { success: true, message: 'Cache refreshed successfully' }
-  } catch (error) {
-    console.error('Error refreshing cache:', error)
-    return { success: false, message: 'Failed to refresh cache' }
-  }
+  // In this case, we don't need to manually refresh the cache
+  // as we're using React's cache function which will automatically
+  // revalidate on each request in production
+  return { success: true, message: 'Cache refreshed successfully' }
 }
