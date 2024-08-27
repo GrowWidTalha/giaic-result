@@ -58,7 +58,7 @@ export default function Component() {
                 <Input
                   id="rollNumber"
                   type="number"
-                  min={6}
+                //   min={6}
                   max={6}
                   placeholder="Enter your roll number"
                   value={rollNumber}
