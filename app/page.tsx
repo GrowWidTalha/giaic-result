@@ -38,17 +38,6 @@ export default function Component() {
     }
   }
 
-  const handleRefreshCache = async () => {
-    setRefreshMessage('Refreshing cache...')
-    try {
-      const result = await refreshCache()
-      setRefreshMessage(result.message)
-    } catch (error) {
-      setRefreshMessage('Failed to refresh cache')
-    }
-    setTimeout(() => setRefreshMessage(''), 3000)
-  }
-
   return (
     <div className="flex flex-col min-h-[100dvh] bg-gradient-to-b from-primary/10 to-primary/5">
       <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
@@ -68,7 +57,9 @@ export default function Component() {
                 <Label htmlFor="rollNumber">Roll Number</Label>
                 <Input
                   id="rollNumber"
-                  type="text"
+                  type="number"
+                  min={6}
+                  max={6}
                   placeholder="Enter your roll number"
                   value={rollNumber}
                   onChange={(e) => setRollNumber(e.target.value)}
